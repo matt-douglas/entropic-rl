@@ -1,62 +1,54 @@
 # Entropic RL: The Thermodynamic State (V2) 🌀
 
-### *Solving the Homeostasis Problem in Coercive Systems*
+### *Where Control Theory meets Social Physics*
 
-This repository implements a **Thermodynamic Simulation** built on the principles of **Entropy-Regularized Reinforcement Learning (MaxEnt RL)**.
+[cite_start]This repository implements a **Thermodynamic Reinforcement Learning** system governed by the principles of **Maximum Entropy RL**[cite: 15, 48]. [cite_start]Unlike deterministic models that collapse into "Heat Death," this engine uses an **Agentic State** to learn sustainable extraction policies through the **Coercion Ratio ($R_c$)**[cite: 16, 21].
 
-Unlike early versions which modeled a deterministic "Heat Death," Version 2 introduces an **Agentic State**—a neural network that must learn to navigate the stability constraints of its environment to avoid systemic liquidation.
+---
 
 ## 💎 The Innovation: The Coercion Ratio ($R_c$)
 
-Standard Reinforcement Learning focuses on reward maximization. This project introduces the **Coercion Ratio ($R_c$)** as the primary metric for systemic sustainability:
+[cite_start]The "owned innovation" of this project is the **Coercion Ratio ($R_c$)**, a metric that defines the "entropy cost of extraction"[cite: 16, 17]:
 
-$$
-R_c(t) = \frac{E_{extracted}(t)}{\mathcal{H}_{citizens}(t) + \delta}
-$$
+$$R_c(t) = \frac{E_{extracted}(t)}{\mathcal{H}_{citizens}(t) + \delta}$$
 
-$R_c$ measures the "marginal cost of order." If the State extracts energy faster than the systemic entropy can buffer the cost, $R_c$ spikes, triggering a **Coercion Crisis**.
+* [cite_start]**Homeostasis ($R_c < 1.0$):** The State (Agent) extracts value at a rate that allows Citizen Entropy to regenerate[cite: 22, 23].
+* **Systemic Collapse ($R_c > 1.0$):** Greed outpaces regrowth, triggering a "Heat Death" where the system loses its "temperature" and eventually fails[cite: 21, 24, 29].
+
+---
 
 ## 📊 V2 Results: The Stability Simplex
 
-The plot below shows a trained **Policy Gradient Agent** discovering the **Homeostatic Zone**.
+[cite_start]The current simulation (found in `simulation.py`) tracks the evolution of the State versus the People over 3,000 epochs[cite: 17, 18, 31]. 
 
-### Key Observations:
+![Simulation Results](results.png)
 
-* **The Early Spike:** At the beginning of training, the agent is "greedy," causing $R_c$ (red dashed line) to spike and Citizen Energy (blue) to crash.
+### **Observation: Sustainable Tyranny**
+* [cite_start]**Epochs 0–500:** The Agent explores high-coercion strategies, causing $R_c$ to spike and Citizen Energy to tank[cite: 22].
+* **Epochs 500–3000:** The **Soft Objective** forces the agent to back off. [cite_start]It settles into a "Dystopian Equilibrium" where citizens survive at ~10% energy, but the system remains stable indefinitely[cite: 23, 30].
 
-* **Learned Restraint:** As the **Soft Objective** penalizes high coercion, the agent learns to lower its extraction rate, allowing the system to settle into a "Sustainable Tyranny" where $R_c$ stays strictly below the **1.0 Stability Threshold**.
+---
 
-## 🧠 Technical Deep Dive
+## 🧠 Technical Deep Dive: Soft Actor-Critic Logic
 
-### 1. The Soft Objective (Reward)
+[cite_start]This project utilizes the **Soft Value Function**, which rewards the agent for both success and maintaining systemic diversity (entropy)[cite: 49, 50]:
 
-The agent does not just maximize Energy ($E$). It optimizes a composite objective that internalizes the health of the host:
+### 1. The Maximum Entropy Objective
+[cite_start]$$J(\pi) = \sum_{t=0}^{T} \mathbb{E} [r(s_t, a_t) + \alpha \mathcal{H}(\pi(\cdot|s_t))]$$ [cite: 57]
 
-$$
-J(\pi) = \mathbb{E} [ E_{state} - \alpha R_c ]
-$$
+### 2. The Reparameterization Trick
+To allow backpropagation through stochastic actions, we treat action $a$ as a transformation of noise $\epsilon$:
+[cite_start]$$a = f_\theta(s, \epsilon) = \mu_\theta(s) + \sigma_\theta(s) \odot \epsilon$$ [cite: 68]
 
-Where $\alpha$ is the **Thermodynamic Temperature** controlling the trade-off between extraction and systemic stability.
+---
 
-### 2. Citizen Reaction Logic (Feedback)
-
-In Version 2, citizens are no longer passive batteries. Their **Regrowth Rate** is inversely proportional to the current Coercion Ratio:
-
-$$
-\text{Regrowth} = \frac{\gamma}{1 + R_c}
-$$
-
-This creates an adversarial feedback loop: high coercion today poisons the resource base of tomorrow.
-
-## 🚀 Execution & Usage
-
-### Requirements
-
-* Python 3.8+
-* PyTorch
-* Matplotlib
-
-### Run the Agentic Loop
+## 🚀 Getting Started
 
 ```bash
+# Clone and Install
+git clone [https://github.com/matt-douglas/entropic-rl](https://github.com/matt-douglas/entropic-rl)
+cd entropic-rl
+pip install -r requirements.txt
+
+# Run the Agentic Simulation
 python3 simulation.py

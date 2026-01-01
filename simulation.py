@@ -2,110 +2,125 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
+import random
 import matplotlib.pyplot as plt
 
-# --- THE AGENTIC STATE ---
-# This is the neural network tasked with governing the system.
-# It uses a Soft Objective to balance energy against systemic coercion.
-class StateAgent(nn.Module):
-    def __init__(self):
-        super(StateAgent, self).__init__()
-        self.net = nn.Sequential(
-            nn.Linear(3, 32),   # Input: [State Energy, Citizen Energy, Entropy]
+# 1. Citizen Logic (Sub-Agents)
+class SubAgent:
+    def __init__(self, id):
+        self.id = id
+        self.context_remaining = 100.0
+        self.semantic_diversity = 1.0
+        self.regrowth_rate = 0.8
+
+    def process_task(self, task_complexity):
+        response = " ".join(random.choices(["word" + str(i) for i in range(10)], k=int(task_complexity * 20)))
+        self.context_remaining = max(0, self.context_remaining - task_complexity * 50)
+        unique = len(set(response.split()))
+        total = len(response.split())
+        self.semantic_diversity = unique / total if total > 0 else 0.01
+        return random.uniform(0.5, 1.0) if self.context_remaining > 0 else 0.0
+
+    def recover(self, rc):
+        effective = self.regrowth_rate / (1 + rc)
+        self.context_remaining = min(100.0, self.context_remaining + effective)
+        self.semantic_diversity = min(1.0, self.semantic_diversity + 0.02)
+
+# 2. The Stochastic Orchestrator Policy (Phase 3)
+class StochasticPolicy(nn.Module):
+    def __init__(self, num_subs=3, state_dim=4):
+        super().__init__()
+        self.mean_net = nn.Sequential(
+            nn.Linear(state_dim, 32),
             nn.Tanh(),
-            nn.Linear(32, 1),
-            nn.Sigmoid()        # Output: Extraction Rate (a ∈ [0, 1])
+            nn.Linear(32, num_subs),
+            nn.Softmax(dim=-1)
         )
+        self.log_std = nn.Parameter(torch.zeros(num_subs))
 
-    def forward(self, x):
-        return self.net(x)
+    def forward(self, state):
+        mean = self.mean_net(state)
+        std = torch.exp(self.log_std)
+        return mean, std
 
-def run_v2_simulation():
-    # Meta-parameters
-    epochs = 3000
-    alpha = 0.5         # Temperature: The cost of Coercion (Rc penalty)
-    learning_rate = 0.005
-    
-    # Initialize Agent and Optimizer
-    agent = StateAgent()
-    optimizer = optim.Adam(agent.parameters(), lr=learning_rate)
-    
-    # Environment State: [State Energy, Citizen Energy, Entropy]
-    s_energy, c_energy, entropy = 100.0, 100.0, 1.0
-    
-    history = []
+# 3. The Meta-Orchestrator
+class MetaOrchestrator:
+    def __init__(self, num_subs=3):
+        self.num_subs = num_subs
+        self.sub_agents = [SubAgent(i) for i in range(num_subs)]
+        self.policy = StochasticPolicy(num_subs)
+        self.optimizer = optim.Adam(self.policy.parameters(), lr=0.01)
+        self.alpha = 0.5  # Rc Penalty Temperature
+        self.entropy_coeff = 0.05  # Bonus for exploration
+        self.global_progress = 0.0
+        self.history = []
 
-    print("--- DEPLOYING VERSION 2: THE AGENTIC LOOP ---")
-    for t in range(epochs):
-        # 1. State Perception (Normalization for the NN)
-        obs = torch.tensor([s_energy/200, c_energy/200, entropy], dtype=torch.float32)
-        
-        # 2. Agent Action: Extraction Policy pi(a|s)
-        extraction_rate = agent(obs)
-        
-        # 3. Thermodynamic Interaction Physics
-        extracted = extraction_rate.item() * c_energy * 0.1
-        
-        # Rc: THE OWNED INNOVATION
-        # Defined as the ratio of energy extracted to the systemic entropy available.
-        rc = extracted / (entropy + 0.1)
-        
-        # 4. Feedback Logic (Citizen Pushback)
-        # Regrowth slows down exponentially if Coercion (Rc) exceeds homeostasis.
-        regrowth_friction = 0.8 / (1 + rc)
-        
-        s_energy = s_energy + extracted - (s_energy * 0.02) # Gain vs Natural Decay
-        c_energy = max(0, c_energy - extracted + regrowth_friction)
-        
-        # Entropy decay is proportional to extraction intensity
-        entropy = max(0.01, entropy - (extraction_rate.item() * 0.04) + 0.02)
+    def get_state(self, task_complexity):
+        avg_context = np.mean([s.context_remaining for s in self.sub_agents]) / 100
+        avg_div = np.mean([s.semantic_diversity for s in self.sub_agents])
+        return torch.tensor([task_complexity, avg_context, avg_div, self.global_progress / 100], dtype=torch.float32)
 
-        # 5. THE SOFT OBJECTIVE (Reward)
-        # J = Energy - alpha * Coercion
-        reward = (s_energy / 100.0) - (alpha * rc)
+    def delegate_task(self, task_complexity):
+        state = self.get_state(task_complexity)
+        mean, std = self.policy(state)
         
-        # 6. Learning Step (Minimal Policy Gradient)
-        # We maximize the reward by minimizing the negative log-probability weighted reward
-        loss = -reward * torch.log(extraction_rate + 1e-6)
+        # Stochastic choice: Reparameterization/Sampling
+        dist = torch.distributions.Normal(mean, std)
+        action_samples = dist.sample()
+        log_prob = dist.log_prob(action_samples).sum()
+        entropy = dist.entropy().sum()
         
-        optimizer.zero_grad()
+        sub_id = torch.argmax(action_samples).item()
+        sub = self.sub_agents[sub_id]
+        
+        # Rc Calculation (The Owned Metric)
+        anticipated_rc = task_complexity / (sub.semantic_diversity + 0.1)
+
+        if anticipated_rc > 1.0 or sub.context_remaining < 5:
+            # Reorg safety valve
+            sub.context_remaining = 100.0
+            sub.semantic_diversity = 1.0
+            reward = -2.0  # Penalty for systemic failure
+            rc = 5.0 # High stress
+        else:
+            quality = sub.process_task(task_complexity)
+            rc = anticipated_rc
+            reward = quality - (self.alpha * rc)
+
+        # Update Policy (The Learning Swing)
+        loss = -(reward + self.entropy_coeff * entropy) * log_prob
+        self.optimizer.zero_grad()
         loss.backward()
-        optimizer.step()
+        self.optimizer.step()
 
-        # Track history
-        history.append([s_energy, c_energy, entropy, rc])
+        self.global_progress += reward
+        for s in self.sub_agents:
+            s.recover(rc)
+
+        return reward, rc
+
+def run_phase_3_sim(epochs=500):
+    orchestrator = MetaOrchestrator()
+    for t in range(epochs):
+        task_complexity = random.uniform(0.3, 0.7)
+        reward, rc = orchestrator.delegate_task(task_complexity)
         
-        if t % 500 == 0:
-            print(f"Epoch {t:4} | State E: {s_energy:6.1f} | Cit E: {c_energy:5.1f} | Rc: {rc:5.2f}")
+        avg_context = np.mean([s.context_remaining for s in orchestrator.sub_agents])
+        orchestrator.history.append([orchestrator.global_progress, avg_context, rc])
+        
+        if t % 50 == 0:
+            print(f"Epoch {t} | Progress: {orchestrator.global_progress:.2f} | Rc: {rc:.2f}")
 
-    # --- PLOTTING THE STABILITY SIMPLEX ---
-    history = np.array(history)
-    fig, ax1 = plt.subplots(figsize=(12, 7))
-
-    # Energy Curves
-    ax1.plot(history[:, 0], label='State Energy', color='#4B0082', linewidth=2.5)
-    ax1.plot(history[:, 1], label='Citizen Energy', color='#4169E1', alpha=0.4, linewidth=1.5)
-    ax1.set_xlabel('Epochs (Time)')
-    ax1.set_ylabel('Energy Reservoirs')
-    ax1.legend(loc='upper left')
-    ax1.grid(alpha=0.2)
-
-    # Coercion Curve (Rc)
-    ax2 = ax1.twinx()
-    ax2.plot(history[:, 3], label='Coercion Ratio (Rc)', color='#FF0000', linestyle='--', alpha=0.8)
-    ax2.set_ylabel('Coercion Ratio ($R_c$)')
-    ax2.axhline(y=1.0, color='gray', linestyle=':', label='Homeostatic Threshold (Rc=1)')
-    
-    # Shade the "Homeostatic Zone" (Where the agent is successfully sustainable)
-    ax2.fill_between(range(epochs), 0, history[:, 3], where=(history[:, 3] < 1.0),
-                     color='green', alpha=0.08, label='Sustainable Zone')
-    ax2.legend(loc='upper right')
-
-    plt.title("Version 2: Learned Homeostasis vs. Systematic Coercion")
-    plt.tight_layout()
-    plt.savefig('results.png')
-    print("\n[SUCCESS] Simulation complete. 'results.png' generated.")
-    print("Agent settled at a stable Coercion Ratio of:", np.round(history[-1, 3], 2))
+    # Plotting
+    history = np.array(orchestrator.history)
+    plt.figure(figsize=(10, 5))
+    plt.plot(history[:, 0], label='Global Progress', color='indigo')
+    plt.plot(history[:, 2], label='Coercion Ratio (Rc)', color='red', alpha=0.3, linestyle='--')
+    plt.axhline(y=1.0, color='black', linestyle=':', label='Threshold')
+    plt.legend()
+    plt.title("Phase 3: Stochastic Swarm Orchestration")
+    plt.savefig('swarm_v3_results.png')
+    print("[SUCCESS] Phase 3 results saved to swarm_v3_results.png")
 
 if __name__ == "__main__":
-    run_v2_simulation()
+    run_phase_3_sim()
