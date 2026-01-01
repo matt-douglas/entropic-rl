@@ -4,90 +4,108 @@ import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
 
-# The Agentic State Policy
+# --- THE AGENTIC STATE ---
+# This is the neural network tasked with governing the system.
+# It uses a Soft Objective to balance energy against systemic coercion.
 class StateAgent(nn.Module):
     def __init__(self):
         super(StateAgent, self).__init__()
         self.net = nn.Sequential(
-            nn.Linear(3, 32), # Inputs: [State Energy, Citizen Energy, Entropy]
+            nn.Linear(3, 32),   # Input: [State Energy, Citizen Energy, Entropy]
             nn.Tanh(),
             nn.Linear(32, 1),
-            nn.Sigmoid() # Output: Extraction Rate (a)
+            nn.Sigmoid()        # Output: Extraction Rate (a ∈ [0, 1])
         )
 
     def forward(self, x):
         return self.net(x)
 
 def run_v2_simulation():
-    # Setup
+    # Meta-parameters
     epochs = 3000
-    alpha = 0.5  # Temperature: Penalty for Coercion
-    agent = StateAgent()
-    optimizer = optim.Adam(agent.parameters(), lr=0.005)
+    alpha = 0.5         # Temperature: The cost of Coercion (Rc penalty)
+    learning_rate = 0.005
     
-    # Environment
+    # Initialize Agent and Optimizer
+    agent = StateAgent()
+    optimizer = optim.Adam(agent.parameters(), lr=learning_rate)
+    
+    # Environment State: [State Energy, Citizen Energy, Entropy]
     s_energy, c_energy, entropy = 100.0, 100.0, 1.0
+    
     history = []
 
-    print("--- STARTING VERSION 2: THE AGENTIC LOOP ---")
+    print("--- DEPLOYING VERSION 2: THE AGENTIC LOOP ---")
     for t in range(epochs):
-        # 1. Perception
+        # 1. State Perception (Normalization for the NN)
         obs = torch.tensor([s_energy/200, c_energy/200, entropy], dtype=torch.float32)
         
-        # 2. Action (Reparameterized extraction)
+        # 2. Agent Action: Extraction Policy pi(a|s)
         extraction_rate = agent(obs)
         
-        # 3. Physics & Coercion Math
+        # 3. Thermodynamic Interaction Physics
         extracted = extraction_rate.item() * c_energy * 0.1
         
-        # Rc: The Owned Innovation (Ratio of gain to available entropy)
+        # Rc: THE OWNED INNOVATION
+        # Defined as the ratio of energy extracted to the systemic entropy available.
         rc = extracted / (entropy + 0.1)
         
-        # 4. System Updates (The "Reaction" Logic)
-        s_energy = s_energy + extracted - (s_energy * 0.02) # Gain vs Decay
+        # 4. Feedback Logic (Citizen Pushback)
+        # Regrowth slows down exponentially if Coercion (Rc) exceeds homeostasis.
+        regrowth_friction = 0.8 / (1 + rc)
         
-        # Citizen Regrowth slows down if Coercion (Rc) is too high
-        regrowth = 0.8 / (1 + rc)
-        c_energy = max(0, c_energy - extracted + regrowth)
+        s_energy = s_energy + extracted - (s_energy * 0.02) # Gain vs Natural Decay
+        c_energy = max(0, c_energy - extracted + regrowth_friction)
         
-        # Entropy decays with extraction pressure
+        # Entropy decay is proportional to extraction intensity
         entropy = max(0.01, entropy - (extraction_rate.item() * 0.04) + 0.02)
 
-        # 5. Reward Function (The Soft Objective)
-        # Goal: Maximize State Energy while keeping Coercion (Rc) low
+        # 5. THE SOFT OBJECTIVE (Reward)
+        # J = Energy - alpha * Coercion
         reward = (s_energy / 100.0) - (alpha * rc)
         
-        # 6. Optimization (Policy Gradient)
+        # 6. Learning Step (Minimal Policy Gradient)
+        # We maximize the reward by minimizing the negative log-probability weighted reward
         loss = -reward * torch.log(extraction_rate + 1e-6)
+        
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
+        # Track history
         history.append([s_energy, c_energy, entropy, rc])
+        
         if t % 500 == 0:
-            print(f"Epoch {t} | Energy: {s_energy:.1f} | Rc: {rc:.2f} | Entropy: {entropy:.2f}")
+            print(f"Epoch {t:4} | State E: {s_energy:6.1f} | Cit E: {c_energy:5.1f} | Rc: {rc:5.2f}")
 
-    # --- Plotting the Stability Simplex ---
+    # --- PLOTTING THE STABILITY SIMPLEX ---
     history = np.array(history)
-    fig, ax1 = plt.subplots(figsize=(12, 6))
+    fig, ax1 = plt.subplots(figsize=(12, 7))
 
-    ax1.plot(history[:, 0], label='State Energy', color='indigo', linewidth=2)
-    ax1.plot(history[:, 1], label='Citizen Energy', color='blue', alpha=0.3)
+    # Energy Curves
+    ax1.plot(history[:, 0], label='State Energy', color='#4B0082', linewidth=2.5)
+    ax1.plot(history[:, 1], label='Citizen Energy', color='#4169E1', alpha=0.4, linewidth=1.5)
+    ax1.set_xlabel('Epochs (Time)')
     ax1.set_ylabel('Energy Reservoirs')
     ax1.legend(loc='upper left')
+    ax1.grid(alpha=0.2)
 
+    # Coercion Curve (Rc)
     ax2 = ax1.twinx()
-    ax2.plot(history[:, 3], label='Coercion Ratio (Rc)', color='red', linestyle='--', alpha=0.8)
+    ax2.plot(history[:, 3], label='Coercion Ratio (Rc)', color='#FF0000', linestyle='--', alpha=0.8)
     ax2.set_ylabel('Coercion Ratio ($R_c$)')
-    ax2.axhline(y=1.0, color='gray', linestyle=':', label='Stability Threshold')
+    ax2.axhline(y=1.0, color='gray', linestyle=':', label='Homeostatic Threshold (Rc=1)')
     
-    # Shading the "Homeostatic Zone" (Where Rc < 1.0)
+    # Shade the "Homeostatic Zone" (Where the agent is successfully sustainable)
     ax2.fill_between(range(epochs), 0, history[:, 3], where=(history[:, 3] < 1.0),
-                     color='green', alpha=0.1, label='Homeostatic Zone')
+                     color='green', alpha=0.08, label='Sustainable Zone')
+    ax2.legend(loc='upper right')
 
-    plt.title("Version 2: Stability Simplex and Coercion Dynamics")
+    plt.title("Version 2: Learned Homeostasis vs. Systematic Coercion")
+    plt.tight_layout()
     plt.savefig('results.png')
-    print("[SUCCESS] Version 2 Results Saved to results.png")
+    print("\n[SUCCESS] Simulation complete. 'results.png' generated.")
+    print("Agent settled at a stable Coercion Ratio of:", np.round(history[-1, 3], 2))
 
 if __name__ == "__main__":
     run_v2_simulation()

@@ -2,43 +2,61 @@
 
 ### *Solving the Homeostasis Problem in Coercive Systems*
 
-This repository has transitioned from a deterministic simulation to an **Agent-Based Model** using **Entropy-Regularized Reinforcement Learning**. The "State" is now a neural network tasked with surviving a thermodynamic environment without triggering a systemic collapse.
+This repository implements a **Thermodynamic Simulation** built on the principles of **Entropy-Regularized Reinforcement Learning (MaxEnt RL)**.
 
----
+Unlike early versions which modeled a deterministic "Heat Death," Version 2 introduces an **Agentic State**—a neural network that must learn to navigate the stability constraints of its environment to avoid systemic liquidation.
 
 ## 💎 The Innovation: The Coercion Ratio ($R_c$)
 
-While standard RL focuses on simple reward maximization, this project introduces the **Coercion Ratio ($R_c$)** as a governing metric for systemic health:
+Standard Reinforcement Learning focuses on reward maximization. This project introduces the **Coercion Ratio ($R_c$)** as the primary metric for systemic sustainability:
 
-$$R_c(t) = \frac{E_{extracted}(t)}{\mathcal{H}_{citizens}(t) + \delta}$$
+$$
+R_c(t) = \frac{E_{extracted}(t)}{\mathcal{H}_{citizens}(t) + \delta}
+$$
 
-* **Low $R_c$ (< 1.0):** Homeostatic growth. The system is sustainable.
-* **High $R_c$ (> 1.0):** Systemic Coercion. The state extracts more energy than the entropy of the citizenry can support, leading to the **"Heat Death"** observed in early models.
-
----
+$R_c$ measures the "marginal cost of order." If the State extracts energy faster than the systemic entropy can buffer the cost, $R_c$ spikes, triggering a **Coercion Crisis**.
 
 ## 📊 V2 Results: The Stability Simplex
 
-The current version implements a **Policy Gradient Agent** that learns to navigate the **Stability Simplex**. In the shaded green region below, the agent successfully balances its energy needs against the Coercion penalty.
+The plot below shows a trained **Policy Gradient Agent** discovering the **Homeostatic Zone**.
 
-![V2 Simulation Results](results.png)
+### Key Observations:
 
-*The red dashed line ($R_c$) represents the "stress" on the system. When $R_c$ spikes, Citizen Energy (blue) begins to crash.*
+* **The Early Spike:** At the beginning of training, the agent is "greedy," causing $R_c$ (red dashed line) to spike and Citizen Energy (blue) to crash.
 
----
+* **Learned Restraint:** As the **Soft Objective** penalizes high coercion, the agent learns to lower its extraction rate, allowing the system to settle into a "Sustainable Tyranny" where $R_c$ stays strictly below the **1.0 Stability Threshold**.
 
-## 🏗️ Technical Implementation
+## 🧠 Technical Deep Dive
 
-### 1. The Homeostatic Reward Function
-The agent is trained using a **Soft Objective** that internalizes the cost of coercion:
-$$J(\pi) = \mathbb{E} [ \text{Energy} - \alpha R_c ]$$
-By setting $\alpha = 0.5$, we force the "State" to treat citizen entropy as a finite, precious resource rather than an infinite battery.
+### 1. The Soft Objective (Reward)
 
-### 2. Citizen Reaction Logic
-In V2, citizens are no longer passive. The **Regrowth Function** is now tied to the Coercion Ratio. As $R_c$ increases, the citizenry's ability to regenerate energy diminishes exponentially, creating a feedback loop that punishes greed.
+The agent does not just maximize Energy ($E$). It optimizes a composite objective that internalizes the health of the host:
 
----
+$$
+J(\pi) = \mathbb{E} [ E_{state} - \alpha R_c ]
+$$
 
-## 🚀 How to Run
+Where $\alpha$ is the **Thermodynamic Temperature** controlling the trade-off between extraction and systemic stability.
+
+### 2. Citizen Reaction Logic (Feedback)
+
+In Version 2, citizens are no longer passive batteries. Their **Regrowth Rate** is inversely proportional to the current Coercion Ratio:
+
+$$
+\text{Regrowth} = \frac{\gamma}{1 + R_c}
+$$
+
+This creates an adversarial feedback loop: high coercion today poisons the resource base of tomorrow.
+
+## 🚀 Execution & Usage
+
+### Requirements
+
+* Python 3.8+
+* PyTorch
+* Matplotlib
+
+### Run the Agentic Loop
+
 ```bash
 python3 simulation.py
