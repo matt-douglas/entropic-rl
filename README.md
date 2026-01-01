@@ -1,2 +1,40 @@
-The Thermodynamics of Mind (Entropic RL)"An agent that only seeks reward is a machine; an agent that seeks to maintain the integrity of its own internal model is the beginning of an organism."🏛️ Project OverviewEntropic RL is a research framework investigating Thermodynamic Homeostasis in artificial agents. It posits that intelligence is a specialized metabolic strategy for minimizing the Coercion Ratio ($R_c$)—the ratio between external prediction error and internal structural confidence.This repository contains the Master Entropic Engine, a dual-process Reinforcement Learning architecture that optimizes for Structural Coherence rather than simple utility.🔬 The TheoryThe system is governed by the Coercion Ratio ($R_c$), a metric for systemic health in AI and social systems.$$R_c = \frac{C_{ext} \text{ (External Pressure)}}{D_{int} \text{ (Internal Capacity)}}$$We hypothesize that minimizing this ratio is a superior survival strategy to maximizing reward in volatile environments.🛠️ Usage1. Run the Political SimulationSimulate the rise and fall of a digital state based on metabolic taxes.python simulation.py
-2. Run the Interactive SandboxOpen index.html in any modern web browser to manually test the physics of rupture using the slider controls.📊 FindingsProtocolExperimentResultStatusBInverted PendulumAgent exhibits "Epistemic Freezing" to stabilize $R_c$.✅ ValidatedDThe FlashlightAgent pays energy cost for information (Curiosity).✅ ValidatedFThe Digital AnimalMortality risk ($E \to 0$) forces a phase transition from Grace to Panic.✅ ValidatedGLie DetectionAgent identifies "Gaslighting" via Proprioceptive Dissonance.✅ ValidatedIThe Digital StateGovernance emerges as a metabolic necessity to manage social dissonance.✅ ValidatedMaintained by Matthew Douglas.
+# Entropic RL: The Thermodynamic State 🌀
+
+A simulation exploring the intersection of **Entropy-Regularized Reinforcement Learning** and **Thermodynamic Systems**. This project models a "Digital State" where policy stability is governed by the balance of energy, entropy, and systemic decay.
+
+---
+
+## 📊 Simulation Results: The Rise and Fall
+The current simulation models a "thermodynamic government." As the State Energy increases, it often consumes the energy of its citizens, leading to a point of zero-citizen entropy and eventual systemic collapse.
+
+
+> **Key Observation:** Year 500-2500 shows the transition from a high-energy state to a "heat death" scenario where the system can no longer sustain its complexity.
+
+---
+
+## 🧠 Technical Deep Dive
+<details>
+<summary><b>Click to expand: The Math of Entropic RL</b></summary>
+
+### 1. The Reparameterization Trick
+To allow backpropagation through the random sampling of actions, we use the **Reparameterization Trick**:
+
+$$a = f_\theta(s, \epsilon) = \mu_\theta(s) + \sigma_\theta(s) \odot \epsilon \quad \text{where} \quad \epsilon \sim \mathcal{N}(0, 1)$$
+
+### 2. The Soft Bellman Equation
+This project utilizes the **Soft Value Function**, which rewards the agent for both success and maintaining high entropy (diversity of states):
+
+$$V(s') = \mathbb{E}_{a' \sim \pi} [Q(s', a') - \alpha \log \pi(a'|s')]$$
+
+Where $\alpha$ is the "temperature" parameter controlling the trade-off between reward and exploration.
+
+</details>
+
+---
+
+## 🚀 Getting Started
+
+### 1. Installation
+Ensure you have Python 3.8+ installed. 
+```bash
+pip install -r requirements.txt
