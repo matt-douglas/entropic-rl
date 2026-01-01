@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Thermodynamics of Mind: Sandbox</title>
+    <style>
+        body { background: #0f172a; color: #e2e8f0; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .container { background: #1e293b; padding: 2rem; border-radius: 12px; border: 1px solid #334155; width: 400px; text-align: center; }
+        h1 { color: #38bdf8; margin-bottom: 0.5rem; }
+        .readout { font-size: 3rem; font-weight: bold; margin: 20px 0; }
+        .label { color: #94a3b8; font-size: 0.9rem; }
+        .slider-group { margin: 20px 0; text-align: left; }
+        input[type=range] { width: 100%; }
+        .status-stable { color: #4ade80; }
+        .status-critical { color: #facc15; }
+        .status-rupture { color: #ef4444; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Entropic Validator</h1>
+        <p class="label">Testing the Coercion Ratio ($R_c$)</p>
+        
+        <div id="rc-display" class="readout status-stable">0.50</div>
+        <div id="status-text">HOMEOSTASIS</div>
+
+        <div class="slider-group">
+            <label>External Pressure ($C_{ext}$)</label>
+            <input type="range" min="1" max="100" value="40" id="c-ext" oninput="update()">
+        </div>
+
+        <div class="slider-group">
+            <label>Internal Capacity ($D_{int}$)</label>
+            <input type="range" min="1" max="100" value="80" id="d-int" oninput="update()">
+        </div>
+        
+        <p style="font-size: 0.8rem; color: #64748b; margin-top: 20px;">
+            Formula: $R_c = C_{ext} / D_{int}$ <br>
+            Rupture occurs at $R_c > 1.5$
+        </p>
+    </div>
+
+    <script>
+        function update() {
+            const c = document.getElementById('c-ext').value;
+            const d = document.getElementById('d-int').value;
+            const rc = (c / d).toFixed(2);
+            
+            const display = document.getElementById('rc-display');
+            const status = document.getElementById('status-text');
+            
+            display.innerText = rc;
+            
+            if (rc < 1.0) {
+                display.className = "readout status-stable";
+                status.innerText = "HOMEOSTASIS";
+            } else if (rc < 1.5) {
+                display.className = "readout status-critical";
+                status.innerText = "CRITICAL FLOW";
+            } else {
+                display.className = "readout status-rupture";
+                status.innerText = "SYSTEM RUPTURE";
+            }
+        }
+    </script>
+</body>
+</html>
