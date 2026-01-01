@@ -15,7 +15,7 @@ In the current **Recovery Patch**, we observe a systemic collapse:
 * **Years 0–500:** The State successfully accumulates energy (Exploitation), but at the cost of depleting **Citizen Energy**.
 * **Years 500–2500:** As Citizen Energy hits **0.0**, the system loses its "temperature." Without the noise/entropy provided by the citizens, the State energy begins a slow, entropic decay toward systemic "Heat Death."
 
-![Simulation Results](results.png)
+![Simulation Results](results.png?v=10)
 
 ---
 
