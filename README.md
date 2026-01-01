@@ -1,69 +1,44 @@
-# Entropic RL: The Thermodynamic State 🌀
+# Entropic RL: The Thermodynamic State (V2) 🌀
 
-### *Where Control Theory meets Social Physics*
+### *Solving the Homeostasis Problem in Coercive Systems*
 
-This repository implements a **Thermodynamic Simulation** built on the principles of **Entropy-Regularized Reinforcement Learning (MaxEnt RL)**. It models a "Digital State" as a closed system where the agent (the State) must balance its own energy accumulation against the entropic vitality of its citizens.
-
----
-
-## 📊 The Simulation: Thermodynamic Government
-
-The simulation (found in `simulation.py`) tracks the evolution of a system over 2,500 iterations. It explores the **Exploitation vs. Exploration** trade-off through a thermodynamic lens.
-
-### **The "Heat Death" Observation**
-In the current **Recovery Patch**, we observe a systemic collapse:
-* **Years 0–500:** The State successfully accumulates energy (Exploitation), but at the cost of depleting **Citizen Energy**.
-* **Years 500–2500:** As Citizen Energy hits **0.0**, the system loses its "temperature." Without the noise/entropy provided by the citizens, the State energy begins a slow, entropic decay toward systemic "Heat Death."
-
-![Simulation Results](results.png?v=10)
+This repository has transitioned from a deterministic simulation to an **Agent-Based Model** using **Entropy-Regularized Reinforcement Learning**. The "State" is now a neural network tasked with surviving a thermodynamic environment without triggering a systemic collapse.
 
 ---
 
-## 🧠 Technical Deep Dive: RL as Inference
+## 💎 The Innovation: The Coercion Ratio ($R_c$)
 
-This project is based on the **Control as Inference** framework. Instead of simply maximizing a reward sum, the agent maximizes a **Soft Objective** that values diversity of behavior.
+While standard RL focuses on simple reward maximization, this project introduces the **Coercion Ratio ($R_c$)** as a governing metric for systemic health:
 
+$$R_c(t) = \frac{E_{extracted}(t)}{\mathcal{H}_{citizens}(t) + \delta}$$
 
-
-### 1. The Maximum Entropy Objective
-Standard RL optimizes for $\sum R_t$. This project utilizes the **MaxEnt** objective, which adds an information-theoretic penalty to the agent's behavior to ensure continuous exploration:
-
-$$J(\pi) = \sum_{t=0}^{T} \mathbb{E}_{(s_t, a_t) \sim \rho_\pi} [r(s_t, a_t) + \alpha \mathcal{H}(\pi(\cdot|s_t))]$$
-
-* **Reward ($r$):** State stability and energy accumulation.
-* **Entropy ($\mathcal{H}$):** The diversity and freedom of citizen states.
-* **Temperature ($\alpha$):** Determines if the system prioritizes "order" (reward) or "chaos" (entropy).
-
-### 2. The Reparameterization Trick (Path Gradients)
-To train neural networks in an entropic environment, we must differentiate through the sampling process. We use the **Reparameterization Trick**, treating the action $a$ as a deterministic transformation of independent Gaussian noise $\epsilon$:
-
-$$a = f_\theta(s, \epsilon) = \mu_\theta(s) + \sigma_\theta(s) \odot \epsilon \quad \text{where} \quad \epsilon \sim \mathcal{N}(0, 1)$$
-
-
-
-This allows the gradient to flow through the stochastic policy, enabling the "Government" to optimize its policy via Gradient Descent.
-
-### 3. Soft Bellman Equation
-The system learns using a **Soft Value Function** $V(s)$, which represents the "Free Energy" of the current state:
-
-$$V(s') = \mathbb{E}_{a' \sim \pi} [Q(s', a') - \alpha \log \pi(a'|s')]$$
-
-By subtracting the log-probability, we penalize the agent for becoming too deterministic (low entropy), effectively forcing it to discover more robust strategies.
+* **Low $R_c$ (< 1.0):** Homeostatic growth. The system is sustainable.
+* **High $R_c$ (> 1.0):** Systemic Coercion. The state extracts more energy than the entropy of the citizenry can support, leading to the **"Heat Death"** observed in early models.
 
 ---
 
-## 🚀 Execution & Usage
+## 📊 V2 Results: The Stability Simplex
 
-### **Requirements**
-* Python 3.8+
-* PyTorch (Neural Engine)
-* Matplotlib (Visualization)
+The current version implements a **Policy Gradient Agent** that learns to navigate the **Stability Simplex**. In the shaded green region below, the agent successfully balances its energy needs against the Coercion penalty.
 
+![V2 Simulation Results](results.png)
+
+*The red dashed line ($R_c$) represents the "stress" on the system. When $R_c$ spikes, Citizen Energy (blue) begins to crash.*
+
+---
+
+## 🏗️ Technical Implementation
+
+### 1. The Homeostatic Reward Function
+The agent is trained using a **Soft Objective** that internalizes the cost of coercion:
+$$J(\pi) = \mathbb{E} [ \text{Energy} - \alpha R_c ]$$
+By setting $\alpha = 0.5$, we force the "State" to treat citizen entropy as a finite, precious resource rather than an infinite battery.
+
+### 2. Citizen Reaction Logic
+In V2, citizens are no longer passive. The **Regrowth Function** is now tied to the Coercion Ratio. As $R_c$ increases, the citizenry's ability to regenerate energy diminishes exponentially, creating a feedback loop that punishes greed.
+
+---
+
+## 🚀 How to Run
 ```bash
-# Clone and Install
-git clone [https://github.com/matt-douglas/entropic-rl](https://github.com/matt-douglas/entropic-rl)
-cd entropic-rl
-python3 -m pip install -r requirements.txt
-
-# Run the Simulation
 python3 simulation.py

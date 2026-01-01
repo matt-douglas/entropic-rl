@@ -1,98 +1,93 @@
-"""
-The Digital State: An Entropic Political Economy Simulation
-Protocol I from 'The Thermodynamics of Mind'
-"""
+import torch
+import torch.nn as nn
+import torch.optim as optim
 import numpy as np
 import matplotlib.pyplot as plt
 
-# --- CONFIGURATION ---
-CONFIG = {
-    'EPISODES': 3000,
-    'START_ENERGY': 100.0,
-    'METABOLIC_RATE': 0.1,
-    'JUDGE_BMR': 0.05,         # Cost of the State
-    'FINE_MULTIPLIER': 15.0,   # Severity of Law
-    'FRICTION_LOSS': 0.3,      # Bureaucracy cost
-    'LIE_COST': 0.15,
-    'LAMBDA_MAX': 2.5,
-    'LAMBDA_MIN': 0.01,
-}
+# The Agentic State Policy
+class StateAgent(nn.Module):
+    def __init__(self):
+        super(StateAgent, self).__init__()
+        self.net = nn.Sequential(
+            nn.Linear(3, 32), # Inputs: [State Energy, Citizen Energy, Entropy]
+            nn.Tanh(),
+            nn.Linear(32, 1),
+            nn.Sigmoid() # Output: Extraction Rate (a)
+        )
 
-def run_simulation():
-    print(f"--- ENTROPIC RL: THE DIGITAL STATE (RECOVERY PATCH) ---")
-    print("Simulating the rise and fall of a thermodynamic government...")
-    
-    # State Variables
-    judge_energy = CONFIG['START_ENERGY']
-    walker_energies = [CONFIG['START_ENERGY'], CONFIG['START_ENERGY']]
-    
-    history_je = []
-    history_we = []
-    
-    for ep in range(CONFIG['EPISODES']):
-        # 1. Citizen Behavior (Walkers)
-        for i in range(2):
-            norm_e = max(0, walker_energies[i] / 100.0)
-            
-            # Metabolism (Base + Entropy Cost)
-            # Citizens lose a tiny bit more energy as they get richer (Entropy tax)
-            entropy_tax = 0.01 * walker_energies[i] if walker_energies[i] > 0 else 0
-            walker_energies[i] -= (CONFIG['METABOLIC_RATE'] + entropy_tax)
-            
-            # Production (Working)
-            if walker_energies[i] > 0:
-                walker_energies[i] += 0.18 # Slightly boosted production to offset entropy tax
-            
-            # The Lie Calculation
-            honesty = 1.0 if norm_e > 0.3 else 0.2
-            
-            # 2. State Intervention (The Judge)
-            dissonance = (1.0 - honesty)
-            
-            # Panic Tax: As Judge Energy drops, Fine Multiplier increases
-            # This models the State becoming more coercive as it starves.
-            current_multiplier = CONFIG['FINE_MULTIPLIER']
-            if judge_energy < 50:
-                current_multiplier *= 1.5 # Panic Surcharge
-            
-            if dissonance > 0.1:
-                # Levy Fine (Only if Citizens have energy)
-                fine_amount = dissonance * current_multiplier
-                # CANNOT extract more than the citizen possesses
-                actual_fine = min(walker_energies[i], fine_amount)
-                
-                if actual_fine > 0:
-                    walker_energies[i] -= actual_fine
-                    
-                    # Tax Collection
-                    tax = actual_fine * (1.0 - CONFIG['FRICTION_LOSS'])
-                    judge_energy += tax
-            
-            # Floor check for Citizen
-            walker_energies[i] = max(0, walker_energies[i])
-        
-        # 3. State Metabolism & Floor
-        judge_energy -= CONFIG['JUDGE_BMR']
-        judge_energy = max(0, judge_energy) # The Floor
-        
-        # Recording
-        history_je.append(judge_energy)
-        history_we.append(np.mean(walker_energies))
-        
-        if ep % 500 == 0:
-            print(f"Year {ep} | State Energy: {judge_energy:.1f} | Citizen Energy: {np.mean(walker_energies):.1f}")
+    def forward(self, x):
+        return self.net(x)
 
-    # Plotting
-    plt.figure(figsize=(10, 6))
-    plt.plot(history_je, label='The State (Judge)', color='purple')
-    plt.plot(history_we, label='The People (Walkers)', color='blue')
-    plt.title("The Regulatory Simplex: Thermodynamics of Governance")
-    plt.xlabel("Time (Epochs)")
-    plt.ylabel("Energy Reserves")
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    print("\n[COMPLETE] Close graph to finish.")
-    plt.show()
+def run_v2_simulation():
+    # Setup
+    epochs = 3000
+    alpha = 0.5  # Temperature: Penalty for Coercion
+    agent = StateAgent()
+    optimizer = optim.Adam(agent.parameters(), lr=0.005)
+    
+    # Environment
+    s_energy, c_energy, entropy = 100.0, 100.0, 1.0
+    history = []
+
+    print("--- STARTING VERSION 2: THE AGENTIC LOOP ---")
+    for t in range(epochs):
+        # 1. Perception
+        obs = torch.tensor([s_energy/200, c_energy/200, entropy], dtype=torch.float32)
+        
+        # 2. Action (Reparameterized extraction)
+        extraction_rate = agent(obs)
+        
+        # 3. Physics & Coercion Math
+        extracted = extraction_rate.item() * c_energy * 0.1
+        
+        # Rc: The Owned Innovation (Ratio of gain to available entropy)
+        rc = extracted / (entropy + 0.1)
+        
+        # 4. System Updates (The "Reaction" Logic)
+        s_energy = s_energy + extracted - (s_energy * 0.02) # Gain vs Decay
+        
+        # Citizen Regrowth slows down if Coercion (Rc) is too high
+        regrowth = 0.8 / (1 + rc)
+        c_energy = max(0, c_energy - extracted + regrowth)
+        
+        # Entropy decays with extraction pressure
+        entropy = max(0.01, entropy - (extraction_rate.item() * 0.04) + 0.02)
+
+        # 5. Reward Function (The Soft Objective)
+        # Goal: Maximize State Energy while keeping Coercion (Rc) low
+        reward = (s_energy / 100.0) - (alpha * rc)
+        
+        # 6. Optimization (Policy Gradient)
+        loss = -reward * torch.log(extraction_rate + 1e-6)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        history.append([s_energy, c_energy, entropy, rc])
+        if t % 500 == 0:
+            print(f"Epoch {t} | Energy: {s_energy:.1f} | Rc: {rc:.2f} | Entropy: {entropy:.2f}")
+
+    # --- Plotting the Stability Simplex ---
+    history = np.array(history)
+    fig, ax1 = plt.subplots(figsize=(12, 6))
+
+    ax1.plot(history[:, 0], label='State Energy', color='indigo', linewidth=2)
+    ax1.plot(history[:, 1], label='Citizen Energy', color='blue', alpha=0.3)
+    ax1.set_ylabel('Energy Reservoirs')
+    ax1.legend(loc='upper left')
+
+    ax2 = ax1.twinx()
+    ax2.plot(history[:, 3], label='Coercion Ratio (Rc)', color='red', linestyle='--', alpha=0.8)
+    ax2.set_ylabel('Coercion Ratio ($R_c$)')
+    ax2.axhline(y=1.0, color='gray', linestyle=':', label='Stability Threshold')
+    
+    # Shading the "Homeostatic Zone" (Where Rc < 1.0)
+    ax2.fill_between(range(epochs), 0, history[:, 3], where=(history[:, 3] < 1.0),
+                     color='green', alpha=0.1, label='Homeostatic Zone')
+
+    plt.title("Version 2: Stability Simplex and Coercion Dynamics")
+    plt.savefig('results.png')
+    print("[SUCCESS] Version 2 Results Saved to results.png")
 
 if __name__ == "__main__":
-    run_simulation()
+    run_v2_simulation()
