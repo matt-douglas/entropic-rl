@@ -1,18 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-# --- Configuration: Phase 7 Sustainable Harvest ---
+# --- Configuration: Phase 7.1 Peak-Relative Rescue ---
 NUM_AGENTS = 50
 EPOCHS = 200
 
-# 1. Sustainable Floor (Raised from 0.01 to 0.2)
-# We never let the system freeze completely; it must remain "liquid" enough to adapt.
+# 1. Sustainable Floor
 MIN_TEMP_FLOOR = 0.2
 INITIAL_TEMP = 1.5
 
-# 2. The Hunger Trigger (Re-Heat Logic)
-REHEAT_DROP_THRESHOLD = 0.15  # 15% drop triggers re-heat
-REHEAT_TEMP = 2.0             # The temperature injection
+# 2. The Rescue Trigger (Peak-Relative)
+# If reward drops below 75% of the historical max, we re-heat.
+RETENTION_THRESHOLD = 0.75
+REHEAT_TEMP = 2.0
 
 # Velcro Settings
 TARGET_REWARD = 10.0
@@ -51,7 +51,7 @@ class SwarmOrchestrator:
         self.global_temperature = INITIAL_TEMP
         self.system_entropy = []
         self.mean_performance = []
-        self.prev_epoch_reward = 0.0 # Memory for the "Hunger" check
+        self.peak_reward = 0.0 # FIX: Memory of the Empire's Height
 
     def calculate_system_entropy(self):
         return np.mean([a.sigma for a in self.agents]) * self.global_temperature
@@ -60,10 +60,9 @@ class SwarmOrchestrator:
         epoch_rewards = []
         
         for agent in self.agents:
-            # Action
             action = agent.act(self.global_temperature)
             
-            # Velocity Control (Inverse to Reward)
+            # Velocity Control
             if agent.last_reward > 0:
                 velocity = max(MIN_STEP, BASE_STEP / (1.0 + agent.last_reward))
             else:
@@ -71,9 +70,7 @@ class SwarmOrchestrator:
             
             agent.state += action * velocity
             
-            # Reward Calculation (Simulating Resource Depletion check)
-            # In a real dynamic env, the GOAL_STATE might move.
-            # Here, we simulate the "need" to re-verify by tracking drops.
+            # Reward Calculation
             dist = abs(GOAL_STATE - agent.state)
             base_reward = (100.0 - dist) / 10.0
             
@@ -90,24 +87,23 @@ class SwarmOrchestrator:
         self.mean_performance.append(avg_reward)
         self.system_entropy.append(self.calculate_system_entropy())
         
-        # --- PHASE 7: SUSTAINABLE LOGIC ---
+        # --- PHASE 7.1: PEAK-RELATIVE LOGIC ---
         
-        # 1. Calculate Drop
-        # Avoid division by zero on first run
-        if self.prev_epoch_reward > 0:
-            drop_ratio = (self.prev_epoch_reward - avg_reward) / self.prev_epoch_reward
-        else:
-            drop_ratio = 0.0
-            
+        # 1. Update the Historical Peak
+        self.peak_reward = max(self.peak_reward, avg_reward)
+        
         status_tag = "TRACKING"
 
-        # 2. The Hunger Trigger
-        if drop_ratio > REHEAT_DROP_THRESHOLD:
-            # Resource Exhaustion Detected! Re-Heat immediately.
+        # 2. The Rescue Trigger
+        # Only trigger if we've actually established a peak (> TARGET)
+        # AND we have fallen below 75% of that peak.
+        if self.peak_reward > TARGET_REWARD and avg_reward < (self.peak_reward * RETENTION_THRESHOLD):
             self.global_temperature = REHEAT_TEMP
-            status_tag = "RE-HEATING (HUNGER)"
+            status_tag = "RE-HEATING (RESCUE)"
+            # Optional: Reset peak slightly so we don't get stuck in a loop
+            self.peak_reward = avg_reward
         
-        # 3. The Velcro Brake (Only applies if NOT re-heating)
+        # 3. The Velcro Brake
         elif avg_reward > TARGET_REWARD:
             self.global_temperature *= BRAKE_FACTOR
             status_tag = "LOCKED (HARVESTING)"
@@ -116,16 +112,13 @@ class SwarmOrchestrator:
         else:
             self.global_temperature *= 0.98
 
-        # 5. Persistent Floor
         self.global_temperature = max(MIN_TEMP_FLOOR, self.global_temperature)
-        
-        self.prev_epoch_reward = avg_reward
         
         return avg_reward, status_tag
 
 def run_simulation():
-    print(f"Initializing Phase 7 (Sustainable Harvest)...")
-    print(f"Re-Heat Threshold: {REHEAT_DROP_THRESHOLD*100}% Drop")
+    print(f"Initializing Phase 7.1 (Peak-Relative Rescue)...")
+    print(f"Rescue Threshold: < {RETENTION_THRESHOLD*100}% of Peak")
     orchestrator = SwarmOrchestrator()
     
     for e in range(EPOCHS):
@@ -142,7 +135,7 @@ def run_simulation():
     plt.subplot(1, 2, 1)
     plt.plot(orchestrator.mean_performance, color='#00ff99', linewidth=2, label='Mean Utility')
     plt.axhline(y=TARGET_REWARD, color='gold', linestyle='--', label='Lock Threshold')
-    plt.title('Swarm Throughput (Adaptive)', fontsize=14)
+    plt.title('Swarm Throughput (Resilient)', fontsize=14)
     plt.grid(True, alpha=0.3)
     plt.legend()
 
