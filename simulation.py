@@ -19,7 +19,7 @@ CONFIG = {
 }
 
 def run_simulation():
-    print(f"--- ENTROPIC RL: THE DIGITAL STATE ---")
+    print(f"--- ENTROPIC RL: THE DIGITAL STATE (RECOVERY PATCH) ---")
     print("Simulating the rise and fall of a thermodynamic government...")
     
     # State Variables
@@ -31,42 +31,53 @@ def run_simulation():
     
     for ep in range(CONFIG['EPISODES']):
         # 1. Citizen Behavior (Walkers)
-        # Walkers generate 'surplus' (milestones) but pay 'metabolism'
-        # Low Energy -> High Deception (Lies)
-        # High Energy -> High Honesty
         for i in range(2):
             norm_e = max(0, walker_energies[i] / 100.0)
             
-            # Metabolism
-            walker_energies[i] -= CONFIG['METABOLIC_RATE']
+            # Metabolism (Base + Entropy Cost)
+            # Citizens lose a tiny bit more energy as they get richer (Entropy tax)
+            entropy_tax = 0.01 * walker_energies[i] if walker_energies[i] > 0 else 0
+            walker_energies[i] -= (CONFIG['METABOLIC_RATE'] + entropy_tax)
             
             # Production (Working)
             if walker_energies[i] > 0:
-                walker_energies[i] += 0.15 # Daily wage/resource
+                walker_energies[i] += 0.18 # Slightly boosted production to offset entropy tax
             
-            # The Lie Calculation (Thermodynamic Morality)
-            # If energy is low, honesty drops.
+            # The Lie Calculation
             honesty = 1.0 if norm_e > 0.3 else 0.2
             
             # 2. State Intervention (The Judge)
-            # Judge detects dishonesty (Social Dissonance)
             dissonance = (1.0 - honesty)
             
-            if dissonance > 0.1 and judge_energy > 0:
-                # Levy Fine
-                fine = dissonance * CONFIG['FINE_MULTIPLIER']
-                walker_energies[i] -= fine
+            # Panic Tax: As Judge Energy drops, Fine Multiplier increases
+            # This models the State becoming more coercive as it starves.
+            current_multiplier = CONFIG['FINE_MULTIPLIER']
+            if judge_energy < 50:
+                current_multiplier *= 1.5 # Panic Surcharge
+            
+            if dissonance > 0.1:
+                # Levy Fine (Only if Citizens have energy)
+                fine_amount = dissonance * current_multiplier
+                # CANNOT extract more than the citizen possesses
+                actual_fine = min(walker_energies[i], fine_amount)
                 
-                # Tax Collection (with friction)
-                tax = fine * (1.0 - CONFIG['FRICTION_LOSS'])
-                judge_energy += tax
+                if actual_fine > 0:
+                    walker_energies[i] -= actual_fine
+                    
+                    # Tax Collection
+                    tax = actual_fine * (1.0 - CONFIG['FRICTION_LOSS'])
+                    judge_energy += tax
+            
+            # Floor check for Citizen
+            walker_energies[i] = max(0, walker_energies[i])
         
-        # 3. State Metabolism
+        # 3. State Metabolism & Floor
         judge_energy -= CONFIG['JUDGE_BMR']
+        judge_energy = max(0, judge_energy) # The Floor
         
         # Recording
-        history_je.append(max(0, judge_energy))
-        history_we.append(max(0, np.mean(walker_energies)))
+        history_je.append(judge_energy)
+        history_we.append(np.mean(walker_energies))
         
         if ep % 500 == 0:
             print(f"Year {ep} | State Energy: {judge_energy:.1f} | Citizen Energy: {np.mean(walker_energies):.1f}")
